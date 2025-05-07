@@ -37,7 +37,7 @@ connect_wifi()
 
 # Send Telegram message
 def send_telegram_message(message):
-    url = "https://api.telegram.org/bot7777659170:AAG-5ewLMU0mVrynG08cYZMTgt2BN0BpSvo/sendMessage".format(BOT_TOKEN)
+    url = "https://api.telegram.org/bot{}/sendMessage".format(BOT_TOKEN)
     payload = {
         'chat_id': CHAT_ID,
         'text': message
