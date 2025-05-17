@@ -1,0 +1,65 @@
+# Install required packages (if not already in your environment)
+!pip install sympy --quiet
+
+# Imports
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import sympy as sp
+from sympy.abc import t, s, x
+
+# Load your published CSV Google Sheet
+sheet_url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQCrAZg78EaYL4WM_0a2YQncztgjS5Z_my748rZWJRcVYWmi6amjIyfR4SoojKsDdzHgbPoL6yFKqE5/pub?output=csv'
+df = pd.read_csv(sheet_url)
+
+# Clean and prepare the data
+df.columns = ['Timestamp', 'Value']
+df['Value'] = pd.to_numeric(df['Value'], errors='coerce')
+df = df.dropna()
+
+# Use the first N values from the sheet for analysis
+max_available = len(df)
+N = min(20, max_available)
+signal = df['Value'].values[:N]
+T = N  # Assume 1 sample per second, so period = N seconds
+
+# Compute Fourier Series coefficients
+a0 = (1/T) * sum(signal)
+
+def a_n(n):
+    return (2/T) * sum(signal[k] * sp.cos(2 * sp.pi * n * k / T) for k in range(len(signal)))
+
+def b_n(n):
+    return (2/T) * sum(signal[k] * sp.sin(2 * sp.pi * n * k / T) for k in range(len(signal)))
+
+# Build the Fourier Series up to N_terms
+N_terms = min(5, len(signal) // 2)
+fourier_series = a0 / 2
+for i in range(1, N_terms + 1):
+    fourier_series += a_n(i) * sp.cos(2 * sp.pi * i * x / T) + b_n(i) * sp.sin(2 * sp.pi * i * x / T)
+
+# Show symbolic Fourier Series
+print("Fourier Series Approximation (symbolic):")
+display(fourier_series.simplify())
+
+# Plot the approximation vs original data
+x_vals = np.linspace(0, T, 1000)
+f_numeric = sp.lambdify(x, fourier_series, modules=['numpy'])
+
+plt.figure(figsize=(10, 5))
+plt.plot(x_vals, f_numeric(x_vals), label="Fourier Approximation", color='blue')
+plt.plot(range(N), signal, 'ro', label="Original Data")
+plt.title("Fourier Series Approximation of Sensor Signal")
+plt.xlabel("Time (samples)")
+plt.ylabel("Sensor Value")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# Laplace Transform using Heaviside representation
+f_t = sum([signal[i] * sp.Heaviside(t - i) for i in range(N)])
+laplace_expr = sp.laplace_transform(f_t, t, s, noconds=True)
+
+# Show symbolic Laplace Transform
+print("Laplace Transform of signal using Heaviside:")
+display(laplace_expr)
